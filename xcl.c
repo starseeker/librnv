@@ -1,5 +1,6 @@
 /* $Id$ */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <fcntl.h>  /*open,close*/
@@ -18,7 +19,6 @@
 #include "rnx.h"
 #include "ll.h"
 #include "dxl.h"
-#include "dsl.h"
 #include "er.h"
 
 extern int rn_notAllowed,rx_compact,drv_compact;
@@ -96,8 +96,6 @@ static void init(void) {
     rnl_init(); rnl_verror_handler=&verror_handler_rnl;
     rnv_init(); rnv_verror_handler=&verror_handler_rnv;
     rnx_init();
-    drv_add_dtl(DXL_URL,&dxl_equal,&dxl_allows);
-    drv_add_dtl(DSL_URL,&dsl_equal,&dsl_allows);
     text=(char*)m_alloc(len_txt=LEN_T,sizeof(char));
     windup();
   }
@@ -223,6 +221,80 @@ static void usage(void) {(*er_printf)("usage: rnv {-[qnspc"
 #endif
 "vh?]} schema.rnc {document.xml}\n");}
 
+#ifdef LIBRNV // LIBRARY
+#include "librnv.h"
+
+rnv_error last_error;
+char rnc_path[RNV_PATH_MAXLEN];
+char err_msg[RNV_ERR_MAXLEN];
+
+int er_string_printf(char *format, ...) {
+	int ret;
+	va_list ap;
+	va_start(ap, format);
+	ret = (*er_vprintf)(format, ap);
+	va_end(ap);
+	return ret;
+}
+int er_string_vprintf(char *format, va_list ap) {
+	if(last_error.code == RNV_ERR_NO) last_error.code = RNV_ERR_UNKOWN;
+	return vsnprintf(last_error.msg, RNV_ERR_MAXLEN, format, ap);
+}
+
+void rnv_initialize() {
+	init();
+
+	peipe = 0;
+	verbose = 1;
+	nexp = NEXP;
+	rnck = 0;
+
+	rnv_reset();
+
+	er_printf = &er_string_printf;
+	er_vprintf = &er_string_vprintf;
+}
+
+void rnv_cleanup() {
+	clear();
+}
+
+int rnv_load_schema(const char* rnc_file_path) {
+	if(strncpy_s(rnc_path, RNV_PATH_MAXLEN, rnc_file_path, RNV_PATH_MAXLEN - 1) != 0) {
+		return last_error.code = RNV_ERR_UNKOWN;
+	}
+	ok = start = rnl_fn(rnc_path);
+
+	last_error.code = ok ? RNV_ERR_NO : RNV_ERR_INVALIDSCHEMA;
+	return last_error.code;
+}
+
+int rnv_validate(const char* xml_file_path) {
+	int fd;
+	if((fd = open(xml_file_path, O_RDONLY)) == -1) {
+		(*er_printf)("I/O error (%s): %s\n", xml_file_path, strerror(errno));
+		return last_error.code = RNV_ERR_FILEIO;
+	}
+	validate(fd);
+	close(fd);
+	clear();
+	return last_error.code;
+}
+
+void rnv_reset() {
+	clear();
+	memset(rnc_path, 0, RNV_PATH_MAXLEN);
+	memset(err_msg, 0, RNV_ERR_MAXLEN);
+	last_error.code = RNV_ERR_NO;
+	last_error.msg = err_msg;
+}
+
+rnv_error rnv_get_last_error() {
+	return last_error;
+}
+
+#else // COMMAND LINE TOOL
+
 int main(int argc,char **argv) {
   init();
 
@@ -281,3 +353,4 @@ int main(int argc,char **argv) {
 
   return ok?EXIT_SUCCESS:EXIT_FAILURE;
 }
+#endif
