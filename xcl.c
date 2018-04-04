@@ -18,7 +18,6 @@
 #include "rnv.h"
 #include "rnx.h"
 #include "ll.h"
-#include "dxl.h"
 #include "er.h"
 
 extern int rn_notAllowed,rx_compact,drv_compact;
@@ -212,14 +211,7 @@ static void validate(int fd) {
 }
 
 static void version(void) {(*er_printf)("rnv version %s\n",RNV_VERSION);}
-static void usage(void) {(*er_printf)("usage: rnv {-[qnspc"
-#if DXL_EXC
-"d"
-#endif
-#if DSL_SCM
-"e"
-#endif
-"vh?]} schema.rnc {document.xml}\n");}
+static void usage(void) {(*er_printf)("usage: rnv {-[qnspcvh?]} schema.rnc {document.xml}\n");}
 
 #ifdef LIBRNV // LIBRARY
 #include "librnv.h"
@@ -296,49 +288,43 @@ rnv_error rnv_get_last_error() {
 #else // COMMAND LINE TOOL
 
 int main(int argc,char **argv) {
-  init();
+    init();
 
-  peipe=0; verbose=1; nexp=NEXP; rnck=0;
-  while(*(++argv)&&**argv=='-') {
-    int i=1;
-    for(;;) {
-      switch(*(*argv+i)) {
-      case '\0': goto END_OF_OPTIONS;
-      case 'q': verbose=0; nexp=0; break;
-      case 'n': if(*(argv+1)) nexp=atoi(*(++argv)); goto END_OF_OPTIONS;
-      case 's': drv_compact=1; rx_compact=1; break;
-      case 'p': peipe=1; break;
-      case 'c': rnck=1; break;
-#if DXL_EXC
-      case 'd': dxl_cmd=*(argv+1); if(*(argv+1)) ++argv; goto END_OF_OPTIONS;
-#endif
-#if DSL_SCM
-      case 'e': dsl_ld(*(argv+1)); if(*(argv+1)) ++argv; goto END_OF_OPTIONS;
-#endif
-      case 'v': version(); break;
-      case 'h': case '?': usage(); return 1;
-      default: (*er_printf)("unknown option '-%c'\n",*(*argv+i)); break;
-      }
-      ++i;
+    peipe=0; verbose=1; nexp=NEXP; rnck=0;
+    while(*(++argv)&&**argv=='-') {
+        int i=1;
+        for(;;) {
+            switch(*(*argv+i)) {
+            case '\0': goto END_OF_OPTIONS;
+            case 'q': verbose=0; nexp=0; break;
+            case 'n': if(*(argv+1)) nexp=atoi(*(++argv)); goto END_OF_OPTIONS;
+            case 's': drv_compact=1; rx_compact=1; break;
+            case 'p': peipe=1; break;
+            case 'c': rnck=1; break;
+            case 'v': version(); break;
+            case 'h': case '?': usage(); return 1;
+            default: (*er_printf)("unknown option '-%c'\n",*(*argv+i)); break;
+            }
+        ++i;
+        }
+        END_OF_OPTIONS:;
     }
-    END_OF_OPTIONS:;
-  }
 
   if(!*(argv)) {usage(); return 1;}
 
   if((ok=start=rnl_fn(*(argv++)))) {
     if(*argv) {
       do {
-	int fd; xml=*argv;
-	if((fd=open(xml,O_RDONLY))==-1) {
-	  (*er_printf)("I/O error (%s): %s\n",xml,strerror(errno));
-	  ok=0;
-	  continue;
-	}
-	if(verbose) (*er_printf)("%s\n",xml);
-	validate(fd);
-	close(fd);
-	clear();
+        int fd; xml=*argv;
+        if((fd=_open(xml,O_RDONLY))==-1) {
+          (*er_printf)("I/O error (%s): %s\n",xml,strerror(errno));
+          ok=0;
+          continue;
+        }
+        if(verbose) (*er_printf)("%s\n",xml);
+        validate(fd);
+        _close(fd);
+        clear();
       } while(*(++argv));
       if(!ok&&verbose) (*er_printf)("error: some documents are invalid\n");
     } else {
