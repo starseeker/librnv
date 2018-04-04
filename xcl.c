@@ -165,7 +165,7 @@ static void processingInstruction(void *userData,
 static int pipeout(void *buf,int len) {
   int ofs=0,iw,lenw=len;
   for(;;) {
-    if((iw=write(1,(char*)buf+ofs,lenw))==-1) {error_handler(XCL_ER_IO,strerror(errno)); return 0;}
+    if((iw=_write(1,(char*)buf+ofs,lenw))==-1) {error_handler(XCL_ER_IO,strerror(errno)); return 0;}
     ofs+=iw; lenw-=iw; if(lenw==0) return 1;
   }
 }
@@ -174,7 +174,7 @@ static int process(int fd) {
   void *buf; int len;
   for(;;) {
     buf=XML_GetBuffer(expat,BUFSIZE);
-    len=read(fd,buf,BUFSIZE);
+    len=_read(fd,buf,BUFSIZE);
     if(len<0) {
       error_handler(XCL_ER_IO,xml,strerror(errno));
       goto ERROR;
@@ -187,7 +187,7 @@ static int process(int fd) {
 
 PARSE_ERROR:
   error_handler(XCL_ER_XML,XML_ErrorString(XML_GetErrorCode(expat)));
-  while(peipe&&(len=read(fd,buf,BUFSIZE))!=0) peipe=peipe&&pipeout(buf,len);
+  while(peipe&&(len=_read(fd,buf,BUFSIZE))!=0) peipe=peipe&&pipeout(buf,len);
 ERROR:
   return 0;
 }
@@ -263,12 +263,12 @@ int rnv_load_schema(const char* rnc_file_path) {
 
 int rnv_validate(const char* xml_file_path) {
 	int fd;
-	if((fd = open(xml_file_path, O_RDONLY)) == -1) {
+    if((fd = _open(xml_file_path, O_RDONLY)) == -1) {
 		(*er_printf)("I/O error (%s): %s\n", xml_file_path, strerror(errno));
 		return last_error.code = RNV_ERR_FILEIO;
 	}
 	validate(fd);
-	close(fd);
+    _close(fd);
 	clear();
 	return last_error.code;
 }
