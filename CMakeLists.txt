@@ -55,6 +55,7 @@ set(RNV_SRC_FILES
     drv.c
     er.c
     ht.c
+    librnv.c
     m.c
     rn.c
     rnc.c
@@ -66,7 +67,6 @@ set(RNV_SRC_FILES
     s.c
     sc.c
     u.c
-    xcl.c
     xmlc.c
     xsd.c
     xsd_tm.c
@@ -81,7 +81,7 @@ if(NOT DEFINED EXTERNAL_LIBRARIES_BASE_DIR)
     if(NOT $ENV{EXTERNAL_LIBRARIES_BASE_DIR} STREQUAL "")
         set(EXTERNAL_LIBRARIES_BASE_DIR $ENV{EXTERNAL_LIBRARIES_BASE_DIR})
     else()
-        set(EXTERNAL_LIBRARIES_BASE_DIR "\\\\192.168.26.102\\Daten3\\development\\libraries")
+        set(EXTERNAL_LIBRARIES_BASE_DIR "\\\\server03.swissqprint.inhouse\\Daten3\\development\\libraries")
     endif()
 endif()
 message(STATUS "Search path for external libraries: ${EXTERNAL_LIBRARIES_BASE_DIR}")
@@ -104,12 +104,6 @@ add_library(librnv SHARED
 )
 target_compile_definitions(librnv PRIVATE LIBRNV)
 
-## Build command line tool
-add_executable(rnv
-    ${RNV_SRC_FILES}
-    ${RNV_HEADER_FILES}
-)
-
 if(ENABLE_DBG)
     unset(EXPAT_LIB_DBG CACHE)
 
@@ -122,7 +116,6 @@ if(ENABLE_DBG)
     message(STATUS "libexpat (debug): ${EXPAT_LIB_DBG}")
     
     target_link_libraries(librnv debug ${EXPAT_LIB_DBG})
-    target_link_libraries(rnv debug ${EXPAT_LIB_DBG})
 endif()
 
 if(ENABLE_REL)
@@ -137,10 +130,8 @@ if(ENABLE_REL)
     message(STATUS "libexpat (debug): ${EXPAT_LIB_REL}")
     
     target_link_libraries(librnv optimized ${EXPAT_LIB_REL})
-    target_link_libraries(rnv optimized ${EXPAT_LIB_REL})
 endif()
 
-# Set properties for shared library
 set_target_properties(librnv PROPERTIES 
     VERSION ${RNV_VERSION}
     SOVERSION ${RNV_VERSION}
@@ -149,7 +140,13 @@ set_target_properties(librnv PROPERTIES
 	DEBUG_POSTFIX 	"${RNV_DBG_SUFFIX}"
 )
 
-# Set properties for command line tool
+## Build command line tool
+add_executable(rnv
+    xcl.c
+)
+
+target_link_libraries(rnv librnv)
+
 set_target_properties(rnv PROPERTIES 
     VERSION ${RNV_VERSION}
 )

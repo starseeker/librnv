@@ -11,7 +11,7 @@
 #define RNVAPI
 #endif
 
-#define RNV_ERR_MAXLEN 512
+#define RNV_ERR_MAXLEN 4096
 #define RNV_PATH_MAXLEN 512
 
 #define RNV_ERR_NO               0
