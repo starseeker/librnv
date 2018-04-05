@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <assert.h>
-#include EXPAT_H
+#include <expat.h>
 #include "m.h"
 #include "s.h"
 #include "erbit.h"

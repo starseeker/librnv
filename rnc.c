@@ -2,7 +2,6 @@
 
 #include <fcntl.h> /* open, close */
 #include <sys/types.h>
-#include UNISTD_H /* open,read,close */
 #include <string.h> /* memcpy,strlen,strcpy,strcat */
 #include <errno.h> /*errno*/
 #include <assert.h> /*assert*/

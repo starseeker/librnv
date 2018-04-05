@@ -86,16 +86,11 @@ if(NOT DEFINED EXTERNAL_LIBRARIES_BASE_DIR)
 endif()
 message(STATUS "Search path for external libraries: ${EXTERNAL_LIBRARIES_BASE_DIR}")
 
-set(LIBEXPAT_DIR ${EXTERNAL_LIBRARIES_BASE_DIR}/libexpat/2.2.0)
+set(LIBEXPAT_DIR ${EXTERNAL_LIBRARIES_BASE_DIR}/libexpat/2.2.5)
 include_directories(${LIBEXPAT_DIR}/include)
 
 # Definitions
-if(MSVC)
-    add_definitions(-DUNISTD_H=<io.h>)
-else()
-    add_definitions(-DUNISTD_H=<unistd.h>)
-endif()
-add_definitions(-DRNV_VERSION="${RNV_VERSION}" -DEXPAT_H=<expat.h>)
+add_definitions(-DRNV_VERSION="${RNV_VERSION}")
 
 ## Build shared library
 add_library(rnv SHARED
@@ -108,7 +103,7 @@ if(ENABLE_DBG)
     unset(EXPAT_LIB_DBG CACHE)
 
     find_library(EXPAT_LIB_DBG
-            NAMES expatd
+            NAMES expatd libexpatd expat libexpat
             PATHS ${LIBEXPAT_DIR}/lib.${TARGET_ARCH_NAME}
             PATH_SUFFIXES debug Debug
     )
@@ -122,7 +117,7 @@ if(ENABLE_REL)
     unset(EXPAT_LIB_REL CACHE)
 
     find_library(EXPAT_LIB_REL
-            NAMES expat
+            NAMES expat libexpat
             PATHS ${LIBEXPAT_DIR}/lib.${TARGET_ARCH_NAME}
             PATH_SUFFIXES release Release
     )
