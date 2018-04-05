@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.7)
+cmake_minimum_required (VERSION 2.8)
 project (rnv)
 
 set(RNV_VERSION "2.0.0")
