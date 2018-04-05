@@ -98,11 +98,11 @@ endif()
 add_definitions(-DRNV_VERSION="${RNV_VERSION}" -DEXPAT_H=<expat.h>)
 
 ## Build shared library
-add_library(librnv SHARED
+add_library(rnv SHARED
     ${RNV_SRC_FILES}
     ${RNV_HEADER_FILES}
 )
-target_compile_definitions(librnv PRIVATE LIBRNV)
+target_compile_definitions(rnv PRIVATE LIBRNV)
 
 if(ENABLE_DBG)
     unset(EXPAT_LIB_DBG CACHE)
@@ -115,7 +115,7 @@ if(ENABLE_DBG)
     
     message(STATUS "libexpat (debug): ${EXPAT_LIB_DBG}")
     
-    target_link_libraries(librnv debug ${EXPAT_LIB_DBG})
+    target_link_libraries(rnv debug ${EXPAT_LIB_DBG})
 endif()
 
 if(ENABLE_REL)
@@ -129,10 +129,10 @@ if(ENABLE_REL)
     
     message(STATUS "libexpat (debug): ${EXPAT_LIB_REL}")
     
-    target_link_libraries(librnv optimized ${EXPAT_LIB_REL})
+    target_link_libraries(rnv optimized ${EXPAT_LIB_REL})
 endif()
 
-set_target_properties(librnv PROPERTIES 
+set_target_properties(rnv PROPERTIES
     VERSION ${RNV_VERSION}
     SOVERSION ${RNV_VERSION}
 #    WINDOWS_EXPORT_ALL_SYMBOLS ON
@@ -141,12 +141,13 @@ set_target_properties(librnv PROPERTIES
 )
 
 ## Build command line tool
-add_executable(rnv
+add_executable(rnvclc
     xcl.c
 )
 
-target_link_libraries(rnv librnv)
+target_link_libraries(rnvclc rnv)
 
-set_target_properties(rnv PROPERTIES 
+set_target_properties(rnvclc PROPERTIES
+#    OUTPUT_NAME "rnv"
     VERSION ${RNV_VERSION}
 )
