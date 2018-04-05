@@ -2,7 +2,7 @@
 #define LIBRNV_H
 
 #if defined (WIN32)
-#if defined(librnv_EXPORTS)
+#if defined(LIBRNV_LIBRARY)
 #define  RNVAPI __declspec(dllexport)
 #else
 #define  RNVAPI __declspec(dllimport)

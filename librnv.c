@@ -4,10 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <fcntl.h>  /*open,close*/
 #include <sys/types.h>
-#include UNISTD_H   /*open,read,close*/
-#include <string.h> /*strerror*/
 #include <errno.h>
 #include <assert.h>
 #include EXPAT_H
@@ -165,16 +162,16 @@ static void processingInstruction(void *userData,
   }
 }
 
-static int process(int fd) {
-  void *buf; int len;
+static int process(FILE* fp) {
+  void *buf; size_t len;
   for(;;) {
     buf=XML_GetBuffer(expat,BUFSIZE);
-    len=_read(fd,buf,BUFSIZE);
+    len = fread(buf, 1, BUFSIZE, fp);
     if(len<0) {
       error_handler(XCL_ER_IO,xml,strerror(errno));
       goto ERROR;
     }
-    if(!XML_ParseBuffer(expat,len,len==0)) goto PARSE_ERROR;
+    if(!XML_ParseBuffer(expat, (int)len, len == 0)) goto PARSE_ERROR;
     if(len==0) break;
   }
   return ok;
@@ -191,7 +188,7 @@ static int externalEntityRef(XML_Parser p,const char *context,
   return 1;
 }
 
-static void validate(int fd) {
+static void validate(FILE* fp) {
   previous=current=start;
   expat=XML_ParserCreateNS(NULL,':');
   XML_SetParamEntityParsing(expat,XML_PARAM_ENTITY_PARSING_ALWAYS);
@@ -199,7 +196,7 @@ static void validate(int fd) {
   XML_SetCharacterDataHandler(expat,&characters);
   XML_SetExternalEntityRefHandler(expat,&externalEntityRef);
   XML_SetProcessingInstructionHandler(expat,&processingInstruction);
-  ok=process(fd);
+  ok=process(fp);
   XML_ParserFree(expat);
 }
 
@@ -237,9 +234,7 @@ void rnv_cleanup() {
 }
 
 int rnv_load_schema(const char* rnc_file_path) {
-	if(strncpy_s(rnc_path, RNV_PATH_MAXLEN, rnc_file_path, RNV_PATH_MAXLEN - 1) != 0) {
-		return last_error.code = RNV_ERR_UNKOWN;
-	}
+    strcpy(rnc_path, rnc_file_path);
 	ok = start = rnl_fn(rnc_path);
 
 	last_error.code = ok ? RNV_ERR_NO : RNV_ERR_INVALIDSCHEMA;
@@ -247,13 +242,13 @@ int rnv_load_schema(const char* rnc_file_path) {
 }
 
 int rnv_validate(const char* xml_file_path) {
-	int fd;
-    if((fd = _open(xml_file_path, O_RDONLY)) == -1) {
+    FILE* fp;
+    if((fp = fopen(xml_file_path, "r")) != NULL) {
 		(*er_printf)("I/O error (%s): %s\n", xml_file_path, strerror(errno));
 		return last_error.code = RNV_ERR_FILEIO;
 	}
-	validate(fd);
-    _close(fd);
+    validate(fp);
+    fclose(fp);
 	clear();
 	return last_error.code;
 }

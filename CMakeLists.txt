@@ -102,7 +102,7 @@ add_library(rnv SHARED
     ${RNV_SRC_FILES}
     ${RNV_HEADER_FILES}
 )
-target_compile_definitions(rnv PRIVATE LIBRNV)
+target_compile_definitions(rnv PRIVATE LIBRNV_LIBRARY)
 
 if(ENABLE_DBG)
     unset(EXPAT_LIB_DBG CACHE)
