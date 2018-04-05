@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
             return print_error();
         }
         else {
-            printf("valid");
+            printf("valid\n");
         }
     }
     return error;
