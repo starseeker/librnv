@@ -242,8 +242,8 @@ int rnv_load_schema(const char* rnc_file_path) {
 }
 
 int rnv_validate(const char* xml_file_path) {
-    FILE* fp;
-    if((fp = fopen(xml_file_path, "r")) != NULL) {
+    FILE* fp = fopen(xml_file_path, "r");
+    if(fp == NULL) {
 		(*er_printf)("I/O error (%s): %s\n", xml_file_path, strerror(errno));
 		return last_error.code = RNV_ERR_FILEIO;
 	}
