@@ -44,11 +44,6 @@ int rnl_fn(char *fn) {
   rnc_open(&src,fn); return load(&src);
 }
 
-int rnl_fd(char *fn,int fd) {
-  struct rnc_source src;
-  rnc_bind(&src,fn,fd); return load(&src);
-}
-
 int rnl_s(char *fn,char *s,int len) {
   struct rnc_source src;
   rnc_stropen(&src,fn,s,len); return load(&src);

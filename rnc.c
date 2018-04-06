@@ -1,6 +1,5 @@
 /* $Id$ */
 
-#include <fcntl.h> /* open, close */
 #include <sys/types.h>
 #include <string.h> /* memcpy,strlen,strcpy,strcat */
 #include <errno.h> /*errno*/
@@ -130,21 +129,24 @@ int rnc_stropen(struct rnc_source *sp,char *fn,char *s,int len) {
   return 0;
 }
 
-int rnc_bind(struct rnc_source *sp,char *fn,int fd) {
+FILE* rnc_bind(struct rnc_source* sp, char* fn, FILE* fp) {
   rnc_source_init(sp,fn);
-  if((sp->fd=fd)!=-1) {
+  if((sp->fp = fp) != NULL) {
     sp->buf=(char*)m_alloc(BUFSIZE,sizeof(char)); sp->flags=SRC_FREE;
     sp->n=sp->i=0; sp->complete=0; rnc_read(sp); sp->i=u_bom(sp->buf,sp->n);
   }
-  return sp->fd;
+  return sp->fp;
 }
 
 static void error(int force,struct rnc_source *sp,int er_no,...);
 
-int rnc_open(struct rnc_source *sp,char *fn) {
-  int fd=rnc_bind(sp,fn,open(fn,O_RDONLY)); if(fd==-1) error(1,sp,RNC_ER_IO,sp->fn,-1,-1,strerror(errno));
-  sp->flags|=SRC_CLOSE;
-  return fd;
+int rnc_open(struct rnc_source* sp, char* fn) {
+  FILE* fp = rnc_bind(sp, fn, fopen(fn, "r"));
+  if(fp == NULL) {
+      error(1, sp, RNC_ER_IO, sp->fn, -1, -1, strerror(errno));
+  }
+  sp->flags |= SRC_CLOSE;
+  return fp != NULL;
 }
 
 int rnc_close(struct rnc_source *sp) {
@@ -155,7 +157,10 @@ int rnc_close(struct rnc_source *sp) {
   sp->complete=-1;
   if(sp->flags&SRC_CLOSE) {
     sp->flags&=~SRC_CLOSE;
-    if(sp->fd!=-1) {ret=close(sp->fd); sp->fd=-1;}
+    if(sp->fp != NULL) {
+        ret = fclose(sp->fp);
+        sp->fp = NULL;
+    }
   }
   m_free(sp->fn); sp->fn=NULL;
   return ret;
@@ -166,7 +171,8 @@ static void rnc_source_init(struct rnc_source *sp,char *fn) {
   sp->fn=s_clone(fn);
   sp->flags=0;
   sp->buf=NULL;
-  sp->complete=sp->fd=-1;
+  sp->complete = -1;
+  sp->fp = NULL;
   sp->line=1; sp->col=1; sp->prevline=-1;
   sp->u=-1; sp->v=0;  sp->nx=-1;
   sp->cur=0;
@@ -178,12 +184,13 @@ static int rnc_read(struct rnc_source *sp) {
   int ni,i;
   sp->n-=sp->i; for(i=0;i!=sp->n;++i) sp->buf[i]=sp->buf[i+sp->i]; sp->i=0;
   for(;;) {
-    ni=read(sp->fd,sp->buf+sp->n,BUFSIZE-sp->n);
+    ni = fread(sp->buf + sp->n, 1, BUFSIZE - sp->n, sp->fp);
     if(ni>0) {
       sp->n+=ni;
       if(sp->n>=BUFTAIL) break;
     } else {
-      close(sp->fd); sp->fd=-1;
+      fclose(sp->fp);
+      sp->fp = NULL;
       sp->complete=1;
       break;
     }
@@ -907,7 +914,7 @@ static int file(struct rnc_source *sp,int nsuri) {
   int ret=0;
   struct rnc_source src;
   add_well_known_nss(nsuri);
-  if(rnc_open(&src,path)!=-1) {
+  if(rnc_open(&src, path)) {
     ret=topLevel(&src);
     sp->flags|=src.flags&SRC_ERRORS;
   } else {

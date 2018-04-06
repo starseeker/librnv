@@ -10,7 +10,6 @@ extern void rnl_init(void);
 extern void rnl_clear(void);
 
 extern int rnl_fn(char *fn);
-extern int rnl_fd(char *fn,int fd);
 extern int rnl_s(char *fn,char *s,int len);
 
 #endif

@@ -1,6 +1,7 @@
 /* $Id$ */
 
 #include <stdarg.h>
+#include <stdio.h>
 
 #ifndef RNC_H
 #define RNC_H 1
@@ -38,7 +39,8 @@ struct rnc_cym {
 
 struct rnc_source {
   int flags;
-  char *fn; int fd;
+  char* fn;
+  FILE* fp;
   char *buf; int i,n;
   int complete;
   int line,col,prevline/*when error reported*/;
@@ -56,7 +58,7 @@ extern void rnc_clear(void);
 
 extern int rnc_open(struct rnc_source *sp,char *fn);
 extern int rnc_stropen(struct rnc_source *sp,char *fn,char *s,int len);
-extern int rnc_bind(struct rnc_source *sp,char *fn,int fd);
+extern FILE* rnc_bind(struct rnc_source* sp, char* fn, FILE* fp);
 extern int rnc_close(struct rnc_source *sp);
 
 extern int rnc_parse(struct rnc_source *sp);
