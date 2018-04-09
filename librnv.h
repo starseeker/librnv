@@ -26,6 +26,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 RNVAPI typedef struct _rnv_error {
 	int code;
 	const char* msg;
@@ -36,9 +38,8 @@ RNVAPI void rnv_cleanup();
 
 RNVAPI int rnv_load_schema(const char* rnc_file_path);
 RNVAPI int rnv_validate(const char* xml_file_path);
-RNVAPI void rnv_reset();
-
-RNVAPI rnv_error rnv_get_last_error();
+RNVAPI void rnv_set_error_printf(int (*function)(char* format, va_list ap));
+RNVAPI void rnv_set_display_candidates(int number);
 
 #ifdef __cplusplus
 }

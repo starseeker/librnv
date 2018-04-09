@@ -513,7 +513,7 @@ int xsd_allows(char *typ,char *ps,char *s,int n) {
     break;
   }
 
-  { int n;
+  { size_t n;
     while((n=strlen(ps))) {
       char *key=ps,*val=key+n+1,*end,i;
       switch(i=s_tab(key,fcttab,NFCT)) {

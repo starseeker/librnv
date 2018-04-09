@@ -45,13 +45,14 @@ static int lastline,lastcol,level;
 static char* xgfile = NULL;
 static char* xgpos = NULL;
 static int ok;
+static int initialized = 0;
 
 /* Expat does not normalize strings on input */
 static char* text; static int len_txt;
 static int n_txt;
 
 #define err(msg) (*er_vprintf)(msg"\n",ap);
-static void verror_handler(int erno,va_list ap) {
+static void verror_handler(int erno, va_list ap) {
   if(erno&ERBIT_RNL) {
     rnl_default_verror_handler(erno&~ERBIT_RNL,ap);
   } else {
@@ -88,26 +89,17 @@ static void verror_handler(int erno,va_list ap) {
 static void verror_handler_rnl(int erno,va_list ap) {verror_handler(erno|ERBIT_RNL,ap);}
 static void verror_handler_rnv(int erno,va_list ap) {verror_handler(erno|ERBIT_RNV,ap);}
 
-static void windup(void);
-static int initialized=0;
-static void init(void) {
-  if(!initialized) {initialized=1;
-    rnl_init(); rnl_verror_handler=&verror_handler_rnl;
-    rnv_init(); rnv_verror_handler=&verror_handler_rnv;
-    rnx_init();
-    text=(char*)m_alloc(len_txt=LEN_T,sizeof(char));
-    windup();
-  }
+static void windup(void) {
+    n_txt = 0;
+    text[n_txt] = '\0';
+    level = 0;
+    lastline = -1;
+    lastcol = -1;
 }
 
 static void clear(void) {
   if(len_txt>LIM_T) {m_free(text); text=(char*)m_alloc(len_txt=LEN_T,sizeof(char));}
   windup();
-}
-
-static void windup(void) {
-  text[n_txt=0]='\0';
-  level=0; lastline=lastcol=-1;
 }
 
 static void error_handler(int erno,...) {
@@ -200,67 +192,63 @@ static void validate(FILE* fp) {
   XML_ParserFree(expat);
 }
 
-rnv_error last_error;
-char rnc_path[RNV_PATH_MAXLEN];
-char err_msg[RNV_ERR_MAXLEN];
-
-int er_string_printf(char *format, ...) {
-	int ret;
-	va_list ap;
-	va_start(ap, format);
-	ret = (*er_vprintf)(format, ap);
-	va_end(ap);
-	return ret;
-}
-int er_string_vprintf(char *format, va_list ap) {
-	if(last_error.code == RNV_ERR_NO) last_error.code = RNV_ERR_UNKOWN;
-    size_t l = strlen(err_msg);
-    return vsnprintf(err_msg + l, RNV_ERR_MAXLEN - l, format, ap);
-}
-
 void rnv_initialize() {
-	init();
+    if(!initialized) {
+        initialized = 1;
 
-	nexp = NEXP;
+        rnl_init();
+        rnl_verror_handler = &verror_handler_rnl;
 
-	rnv_reset();
+        rnv_init();
+        rnv_verror_handler = &verror_handler_rnv;
 
-	er_printf = &er_string_printf;
-	er_vprintf = &er_string_vprintf;
+        rnx_init();
+
+        text = (char*)m_alloc(len_txt = LEN_T, sizeof(char));
+        windup();
+    }
+}
+
+void rnv_set_display_candidates(int number) {
+    nexp = number;
+}
+
+void rnv_set_error_printf(int (*function)(char* format, va_list ap)) {
+    er_vprintf = function;
 }
 
 void rnv_cleanup() {
-	clear();
+    clear(); // TODO ???
+    free(text);
+
+    initialized = 0;
 }
 
+/**
+ * @brief Load a Relax NG compact syntax schema
+ * @param rnc_file_path Path to the schema file
+ * @return RNV_ERR_NO on success or an error code otherwise
+ */
 int rnv_load_schema(const char* rnc_file_path) {
-    strcpy(rnc_path, rnc_file_path);
-	ok = start = rnl_fn(rnc_path);
-
-	last_error.code = ok ? RNV_ERR_NO : RNV_ERR_INVALIDSCHEMA;
-	return last_error.code;
+    ok = start = rnl_fn(rnc_file_path);
+    return ok ? RNV_ERR_NO : RNV_ERR_INVALIDSCHEMA;
 }
 
+/**
+ * @brief rnv_validate
+ * @param xml_file_path
+ * @return
+ */
 int rnv_validate(const char* xml_file_path) {
-    FILE* fp = fopen(xml_file_path, "r");
+    xml = xml_file_path;
+    FILE* fp = fopen(xml, "r");
     if(fp == NULL) {
-		(*er_printf)("I/O error (%s): %s\n", xml_file_path, strerror(errno));
-		return last_error.code = RNV_ERR_FILEIO;
+        (*er_printf)("I/O error (%s): %s\n", xml, strerror(errno));
+        return RNV_ERR_FILEIO;
 	}
     validate(fp);
     fclose(fp);
 	clear();
-	return last_error.code;
-}
-
-void rnv_reset() {
-	clear();
-	memset(rnc_path, 0, RNV_PATH_MAXLEN);
-	memset(err_msg, 0, RNV_ERR_MAXLEN);
-	last_error.code = RNV_ERR_NO;
-	last_error.msg = err_msg;
-}
-
-rnv_error rnv_get_last_error() {
-	return last_error;
+    xml = NULL;
+    return ok ? RNV_ERR_NO : RNV_ERR_VALIDATIONFAILED;
 }
