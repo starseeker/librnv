@@ -3,7 +3,8 @@
 #ifndef ER_H
 #define ER_H 1
 
-#include <stdarg.h>
+#include <stdarg.h> // va_list
+#include <stddef.h> // size_t
 
 void error_begin(int error);
 size_t error_appendf(const char* format, ...);
