@@ -41,13 +41,15 @@ void m_free(void *p) {
   free(p);
 }
 
-void *m_alloc(int length,int size) {
-  void *p=malloc(length*size);
-  if(p==NULL) {
-    (*er_printf)("failed to allocate %i bytes of memory\n",length*size);
-    exit(1);
-  }
-  return p;
+void* m_alloc(int length, int size) {
+    void* p = malloc(length * size);
+    if(p == NULL) {
+        error_begin(errno);
+        error_appendf("failed to allocate %i bytes of memory\n", length * size);
+        error_end();
+        exit(1);
+    }
+    return p;
 }
 
 #endif

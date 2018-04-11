@@ -15,7 +15,7 @@ static int len_f,n_f;
 static int *flat;
 static int errors;
 
-#define err(msg) (*er_vprintf)("error: "msg"\n",ap)
+#define err(msg) error_vappendf("error: "msg"\n", ap)
 void rnd_default_verror_handler(int er_no,va_list ap) {
   switch(er_no) {
   case RND_ER_LOOPST: err("loop in start pattern"); break;

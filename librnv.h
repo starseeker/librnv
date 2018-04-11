@@ -11,9 +11,6 @@
 #define RNVAPI
 #endif
 
-#define RNV_ERR_MAXLEN 4096
-#define RNV_PATH_MAXLEN 512
-
 #define RNV_ERR_NO               0
 #define RNV_ERR_UNKOWN           1
 #define RNV_ERR_ALLOCFAILURE     2
@@ -26,19 +23,12 @@
 extern "C" {
 #endif
 
-#include <stdarg.h>
-
-RNVAPI typedef struct _rnv_error {
-	int code;
-	const char* msg;
-} rnv_error;
-
 RNVAPI void rnv_initialize();
 RNVAPI void rnv_cleanup();
 
 RNVAPI int rnv_load_schema(const char* rnc_file_path);
 RNVAPI int rnv_validate(const char* xml_file_path);
-RNVAPI void rnv_set_error_printf(int (*function)(char* format, va_list ap));
+RNVAPI void rnv_set_error_callback(void (*callback)(const char* msg));
 RNVAPI void rnv_set_display_candidates(int number);
 
 #ifdef __cplusplus

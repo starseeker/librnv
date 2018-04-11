@@ -40,13 +40,12 @@ static int (*memo)[M_SIZE];
 static int i_m,len_m;
 static struct hashtable ht_m;
 
-#define err(msg) (*er_vprintf)(msg"\n",ap);
 void drv_default_verror_handler(int erno,va_list ap) {
   if(erno&ERBIT_XSD) {
     xsd_default_verror_handler(erno&~ERBIT_XSD,ap);
   } else {
     switch(erno) {
-    case DRV_ER_NODTL: err("no datatype library for URI '%s'"); break;
+    case DRV_ER_NODTL: error_vappendf("no datatype library for URI '%s'", ap); break;
     default: assert(0);
     }
   }

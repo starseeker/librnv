@@ -14,9 +14,9 @@
 #include "er.h"
 #include "xsd.h"
 
-#define err(msg) (*er_vprintf)(msg"\n",ap)
+#define err(msg) error_appendf(msg"\n",ap)
 void xsd_default_verror_handler(int erno,va_list ap) {
-  (*er_printf)("XML Schema datatypes: ");
+  error_appendf("XML Schema datatypes: ");
   if(erno&ERBIT_RX) {
     rx_default_verror_handler(erno&~ERBIT_RX,ap);
   } else {

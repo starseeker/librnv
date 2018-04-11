@@ -5,10 +5,11 @@
 
 #include <stdarg.h>
 
-extern int (*er_printf)(char *format,...);
-extern int (*er_vprintf)(char *format,va_list ap);
+void error_begin(int error);
+size_t error_appendf(const char* format, ...);
+size_t error_vappendf(const char* format, va_list ap);
+void error_end();
 
-extern int er_default_printf(char *format,...);
-extern int er_default_vprintf(char *format,va_list ap);
+extern void (*error_callback)(const char* error_msg);
 
 #endif

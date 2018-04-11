@@ -11,10 +11,9 @@ void print_usage() {
     printf("usage: rnv schema.rnc document.xml {other_documents.xml}");
 }
 
-int record_error(char* format, va_list ap) {
+void record_error(const char* error_msg) {
     errctr++;
-    size_t l = strlen(errmsg);
-    return vsnprintf(errmsg + l, RNV_ERR_MAXLEN - l, format, ap);
+    strcat_s(errmsg, ERR_MSG_BUF_LENGTH, error_msg);
 }
 
 int main(int argc, char** argv) {
@@ -26,18 +25,18 @@ int main(int argc, char** argv) {
     memset(errmsg, 0, ERR_MSG_BUF_LENGTH);
 
     rnv_initialize();
-    rnv_set_error_printf(record_error);
+    rnv_set_error_callback(record_error);
 
     int i = 1; // argument index
     if(rnv_load_schema(argv[i++]) != RNV_ERR_NO) {
-        printf("Invalid Relax NG schema\n");
-        return -2;
+        printf("Invalid Relax NG schema:\n%s", errmsg);
+        return errctr;
     }
     while(i < argc) {
         const char* xml_document = argv[i++];
         printf("%s -> ", xml_document);
         if(rnv_validate(xml_document) != RNV_ERR_NO) {
-            printf("validation failure:\n%s", errmsg);
+            printf("validation failed with %i error(s):\n%s", errctr, errmsg);
         }
         else {
             printf("valid\n");

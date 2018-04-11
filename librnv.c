@@ -33,9 +33,6 @@ extern int rn_notAllowed,rx_compact,drv_compact;
 #define XCL_ER_XML 1
 #define XCL_ER_XENT 2
 
-#define PIXGFILE "davidashen-net-xg-file"
-#define PIXGPOS "davidashen-net-xg-pos"
-
 static int nexp;
 static char* xml;
 static XML_Parser expat = NULL;
@@ -51,43 +48,55 @@ static int initialized = 0;
 static char* text; static int len_txt;
 static int n_txt;
 
-#define err(msg) (*er_vprintf)(msg"\n",ap);
-static void verror_handler(int erno, va_list ap) {
-  if(erno&ERBIT_RNL) {
-    rnl_default_verror_handler(erno&~ERBIT_RNL,ap);
-  } else {
-    int line=XML_GetCurrentLineNumber(expat),col=XML_GetCurrentColumnNumber(expat);
-    if(line!=lastline||col!=lastcol) { lastline=line; lastcol=col;
-      if(xgfile) (*er_printf)("%s:%s: error: ",xgfile,xgpos); else
-      (*er_printf)("%s:%i:%i: error: ",xml,line,col);
-      if(erno&ERBIT_RNV) {
-	rnv_default_verror_handler(erno&~ERBIT_RNV,ap);
-	if(nexp) { int req=2, i=0; char *s;
-	  while(req--) {
-	    rnx_expected(previous,req);
-	    if(i==rnx_n_exp) continue;
-	    if(rnx_n_exp>nexp) break;
-	    (*er_printf)((char*)(req?"required:\n":"allowed:\n"));
-	    for(;i!=rnx_n_exp;++i) {
-	      (*er_printf)("\t%s\n",s=rnx_p2str(rnx_exp[i]));
-	      m_free(s);
-	    }
-	  }
-	}
-      } else {
-	switch(erno) {
-	case XCL_ER_IO: err("%s"); break;
-	case XCL_ER_XML: err("%s"); break;
-	case XCL_ER_XENT: err("pipe through xx to expand external entities"); break;
-	default: assert(0);
-	}
-      }
+static void validation_error_handler(int erno, va_list ap) {
+    int line = XML_GetCurrentLineNumber(expat);
+    int col = XML_GetCurrentColumnNumber(expat);
+    if(line != lastline || col != lastcol) {
+        lastline = line;
+        lastcol = col;
+        error_begin(erno);
+        error_appendf("%s:%i:%i: error: ", xml, line, col);
+        rnv_default_verror_handler(erno, ap);
+        if(nexp) {
+            int req = 2;
+            int i = 0;
+            char* s;
+            while(req--) {
+                rnx_expected(previous, req);
+                if(i == rnx_n_exp) continue;
+                if(rnx_n_exp > nexp) break;
+                error_appendf((const char*)(req ? "required:\n" : "allowed:\n"));
+                for(; i != rnx_n_exp; ++i) {
+                    error_appendf("\t%s\n",s=rnx_p2str(rnx_exp[i]));
+                    m_free(s);
+                }
+            }
+        }
+        error_end();
     }
-  }
 }
 
-static void verror_handler_rnl(int erno,va_list ap) {verror_handler(erno|ERBIT_RNL,ap);}
-static void verror_handler_rnv(int erno,va_list ap) {verror_handler(erno|ERBIT_RNV,ap);}
+static void schema_error_handler(int erno, va_list ap) {
+  rnl_default_verror_handler(erno, ap);
+}
+
+static void local_error_handler(int erno, va_list ap) {
+    error_begin(erno);
+    switch(erno) {
+        case XCL_ER_IO: error_vappendf("%s", ap); break;
+        case XCL_ER_XML: error_vappendf("%s", ap); break;
+        case XCL_ER_XENT: error_vappendf("external entities are not supported", ap); break;
+        default: assert(0);
+    }
+    error_end();
+}
+
+static void report_error(int erno, ...) {
+  va_list ap;
+  va_start(ap, erno);
+  local_error_handler(erno, ap);
+  va_end(ap);
+}
 
 static void windup(void) {
     n_txt = 0;
@@ -100,10 +109,6 @@ static void windup(void) {
 static void clear(void) {
   if(len_txt>LIM_T) {m_free(text); text=(char*)m_alloc(len_txt=LEN_T,sizeof(char));}
   windup();
-}
-
-static void error_handler(int erno,...) {
-  va_list ap; va_start(ap,erno); verror_handler(erno,ap); va_end(ap);
 }
 
 static void flush_text(void) {
@@ -142,25 +147,13 @@ static void characters(void *userData,const char *s,int len) {
   }
 }
 
-static void processingInstruction(void *userData,
-    const char *target,const char *data) {
-  if(strcmp(PIXGFILE,target)==0) {
-    if(xgfile) m_free(xgfile); 
-    xgfile=s_clone((char*)data);
-  } else if(strcmp(PIXGPOS,target)==0) {
-    if(xgpos) m_free(xgpos);
-    xgpos=s_clone((char*)data);
-    *strchr(xgpos,' ')=':';
-  }
-}
-
 static int process(FILE* fp) {
   void *buf; size_t len;
   for(;;) {
     buf=XML_GetBuffer(expat,BUFSIZE);
     len = fread(buf, 1, BUFSIZE, fp);
     if(len<0) {
-      error_handler(XCL_ER_IO,xml,strerror(errno));
+      report_error(XCL_ER_IO, xml, strerror(errno));
       goto ERROR;
     }
     if(!XML_ParseBuffer(expat, (int)len, len == 0)) goto PARSE_ERROR;
@@ -169,14 +162,14 @@ static int process(FILE* fp) {
   return ok;
 
 PARSE_ERROR:
-  error_handler(XCL_ER_XML,XML_ErrorString(XML_GetErrorCode(expat)));
+  report_error(XCL_ER_XML, XML_ErrorString(XML_GetErrorCode(expat)));
 ERROR:
   return 0;
 }
 
 static int externalEntityRef(XML_Parser p,const char *context,
     const char *base,const char *systemId,const char *publicId) {
-  error_handler(XCL_ER_XENT);
+  report_error(XCL_ER_XENT);
   return 1;
 }
 
@@ -187,7 +180,6 @@ static void validate(FILE* fp) {
   XML_SetElementHandler(expat,&start_element,&end_element);
   XML_SetCharacterDataHandler(expat,&characters);
   XML_SetExternalEntityRefHandler(expat,&externalEntityRef);
-  XML_SetProcessingInstructionHandler(expat,&processingInstruction);
   ok=process(fp);
   XML_ParserFree(expat);
 }
@@ -197,15 +189,17 @@ void rnv_initialize() {
         initialized = 1;
 
         rnl_init();
-        rnl_verror_handler = &verror_handler_rnl;
+        rnl_verror_handler = &schema_error_handler;
 
         rnv_init();
-        rnv_verror_handler = &verror_handler_rnv;
+        rnv_verror_handler = &validation_error_handler;
 
         rnx_init();
 
         text = (char*)m_alloc(len_txt = LEN_T, sizeof(char));
         windup();
+
+        nexp = 0;
     }
 }
 
@@ -213,8 +207,8 @@ void rnv_set_display_candidates(int number) {
     nexp = number;
 }
 
-void rnv_set_error_printf(int (*function)(char* format, va_list ap)) {
-    er_vprintf = function;
+void rnv_set_error_callback(void (*callback)(const char*)) {
+    error_callback = callback;
 }
 
 void rnv_cleanup() {
@@ -243,7 +237,7 @@ int rnv_validate(const char* xml_file_path) {
     xml = xml_file_path;
     FILE* fp = fopen(xml, "r");
     if(fp == NULL) {
-        (*er_printf)("I/O error (%s): %s\n", xml, strerror(errno));
+        report_error(XCL_ER_IO, xml, strerror(errno));
         return RNV_ERR_FILEIO;
 	}
     validate(fp);
