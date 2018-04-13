@@ -7,13 +7,44 @@
 static int errctr = 0;
 static char errmsg[ERR_MSG_BUF_LENGTH];
 
+static size_t string_cat(char* dst, size_t dst_size, const char* src) {
+#if defined _WIN32 // use strcat_s on Windows
+    return strcat_s(dst, dst_size, src);
+#elif !defined __GNU_LIBRARY && !defined __GLIBC__ // use strlcat for non GLIBC based UNIX systems (like BSD or Mac OS)
+    return strlcat(dst, src, dst_size);
+#else // use implementation below for GNU/Linux
+    const char* s = src;
+    char* d = dst;
+    size_t n = dst_size;
+    size_t dst_length;
+
+    while(n-- != 0 && *d != '\0') d++;
+    dst_length = d - dst;
+    n = dst_size - dst_length;
+
+    if(n == 0) {
+        return(dst_length + strlen(s));
+    }
+    while(*s != '\0') {
+        if(n != 1) {
+            *d++ = *s;
+            n--;
+        }
+        s++;
+    }
+    *d = '\0';
+
+    return(dst_length + (s - src));
+#endif
+}
+
 void print_usage() {
     printf("usage: rnv schema.rnc document.xml {other_documents.xml}");
 }
 
 void record_error(const char* error_msg) {
     errctr++;
-    strcat_s(errmsg, ERR_MSG_BUF_LENGTH, error_msg);
+    string_cat(errmsg, ERR_MSG_BUF_LENGTH, error_msg);
 }
 
 int main(int argc, char** argv) {
