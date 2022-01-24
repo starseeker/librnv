@@ -1,148 +1,78 @@
-cmake_minimum_required (VERSION 2.8)
-project (rnv)
+cmake_minimum_required (VERSION 3.12)
+project (RNV)
 
 set(RNV_VERSION "2.0.0")
 
-# Target architecture
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    SET(TARGET_ARCH_NAME "amd64")
-else() 
-    SET(TARGET_ARCH_NAME "i386")
-endif()
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/expat)
 
-# Build configuration
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release")
-
-set(ENABLE_DBG ON)
-set(ENABLE_REL ON)
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(ENABLE_REL OFF)
-endif()
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(ENABLE_DBG OFF)
-endif()
-
-set(RNV_REL_SUFFIX "")
-set(RNV_DBG_SUFFIX "d")
+set(EXPAT_SRCS
+  expat/xmltok.c
+  expat/xmlrole.c
+  expat/xmlparse.c
+  )
 
 # Header files
-set(RNV_HEADER_FILES
-    ary.h
-    drv.h
-    er.h
-    erbit.h
-    ht.h
-    m.h
-    librnv.h
-    rn.h
-    rnc.h
-    rnd.h
-    rnl.h
-    rnv.h
-    rnx.h
-    rx.h
-    s.h
-    sc.h
-    u.h
-    xmlc.h
-    xsd.h
-    xsd_tm.h
-)
+set(HDR_FILES
+  ary.h
+  drv.h
+  er.h
+  erbit.h
+  ht.h
+  m.h
+  librnv.h
+  rn.h
+  rnc.h
+  rnd.h
+  rnl.h
+  rnv.h
+  rnx.h
+  rx.h
+  s.h
+  sc.h
+  u.h
+  xmlc.h
+  xsd.h
+  xsd_tm.h
+  )
 
 # Source files
-set(RNV_SRC_FILES
-    ary.c
-    drv.c
-    er.c
-    ht.c
-    librnv.c
-    m.c
-    rn.c
-    rnc.c
-    rnd.c
-    rnl.c
-    rnv.c
-    rnx.c
-    rx.c
-    s.c
-    sc.c
-    u.c
-    xmlc.c
-    xsd.c
-    xsd_tm.c
-)
+set(SRC_FILES
+  ary.c
+  drv.c
+  er.c
+  ht.c
+  librnv.c
+  m.c
+  rn.c
+  rnc.c
+  rnd.c
+  rnl.c
+  rnv.c
+  rnx.c
+  rx.c
+  s.c
+  sc.c
+  u.c
+  xmlc.c
+  xsd.c
+  xsd_tm.c
+  )
 
-# Create file groups for IDEs like Visual Studio
-source_group("Header Files" FILES ${RNV_HEADER_FILES})
-source_group("Source Files" FILES ${RNV_SRC_FILES})
-
-# External libraries
-if(NOT DEFINED EXTERNAL_LIBRARIES_BASE_DIR)
-    if(NOT $ENV{EXTERNAL_LIBRARIES_BASE_DIR} STREQUAL "")
-        set(EXTERNAL_LIBRARIES_BASE_DIR $ENV{EXTERNAL_LIBRARIES_BASE_DIR})
-    else()
-        set(EXTERNAL_LIBRARIES_BASE_DIR "\\\\server03.swissqprint.inhouse\\Daten3\\development\\libraries")
-    endif()
-endif()
-message(STATUS "Search path for external libraries: ${EXTERNAL_LIBRARIES_BASE_DIR}")
-
-set(LIBEXPAT_DIR ${EXTERNAL_LIBRARIES_BASE_DIR}/libexpat/2.2.5)
-include_directories(${LIBEXPAT_DIR}/include)
 
 # Definitions
 add_definitions(-DRNV_VERSION="${RNV_VERSION}")
 
 ## Build shared library
-add_library(rnv SHARED
-    ${RNV_SRC_FILES}
-    ${RNV_HEADER_FILES}
-)
-target_compile_definitions(rnv PRIVATE LIBRNV_LIBRARY)
-
-if(ENABLE_DBG)
-    unset(EXPAT_LIB_DBG CACHE)
-
-    find_library(EXPAT_LIB_DBG
-            NAMES expatd libexpatd expat libexpat
-            PATHS ${LIBEXPAT_DIR}/lib.${TARGET_ARCH_NAME}
-            PATH_SUFFIXES debug Debug
-    )
-    
-    message(STATUS "libexpat (debug): ${EXPAT_LIB_DBG}")
-    
-    target_link_libraries(rnv debug ${EXPAT_LIB_DBG})
-endif()
-
-if(ENABLE_REL)
-    unset(EXPAT_LIB_REL CACHE)
-
-    find_library(EXPAT_LIB_REL
-            NAMES expat libexpat
-            PATHS ${LIBEXPAT_DIR}/lib.${TARGET_ARCH_NAME}
-            PATH_SUFFIXES release Release
-    )
-    
-    message(STATUS "libexpat (debug): ${EXPAT_LIB_REL}")
-    
-    target_link_libraries(rnv optimized ${EXPAT_LIB_REL})
-endif()
-
-set_target_properties(rnv PROPERTIES
-    VERSION ${RNV_VERSION}
-    SOVERSION ${RNV_VERSION}
-#    WINDOWS_EXPORT_ALL_SYMBOLS ON
-	RELEASE_POSTFIX "${RNV_REL_SUFFIX}"
-	DEBUG_POSTFIX 	"${RNV_DBG_SUFFIX}"
-)
+add_library(lrnv SHARED ${EXPAT_SRCS} ${SRC_FILES} ${HDR_FILES})
+target_compile_definitions(lrnv PRIVATE LIBRNV_LIBRARY)
 
 ## Build command line tool
-add_executable(rnvclc
-    xcl.c
-)
+add_executable(rnv xcl.c)
+target_link_libraries(rnv lrnv)
 
-target_link_libraries(rnvclc rnv)
-
-set_target_properties(rnvclc PROPERTIES
-#    OUTPUT_NAME "rnv"
-    VERSION ${RNV_VERSION}
-)
+# Local Variables:
+# tab-width: 8
+# mode: cmake
+# indent-tabs-mode: t
+# End:
+# ex: shiftwidth=2 tabstop=8
